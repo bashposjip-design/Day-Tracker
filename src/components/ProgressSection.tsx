@@ -106,7 +106,7 @@ export function ProgressSection({
   return (
     <section aria-labelledby="progress-heading" className="space-y-8">
       {/* Compact Statistics Strip (Single-elevation surface with hairline dividers) */}
-      <div className="rounded-2xl border border-[#E7E5DF] dark:border-[#262B28] bg-white dark:bg-[#181C1A] divide-y sm:divide-y-0 sm:divide-x divide-[#EFECE6] dark:divide-[#242926] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="rounded-2xl border border-[#E7E5DF] dark:border-[#262B28] bg-white dark:bg-[#181C1A] divide-y sm:divide-y-0 sm:divide-x divide-[#EFECE6] dark:divide-[#242926] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
         <div className="p-5">
           <p className="text-xs text-[#6B736D] dark:text-[#959E97]">Today’s Completion</p>
           <p className="mt-1.5 font-mono-tabular text-2xl font-semibold text-[#1C1F1D] dark:text-[#F2F4F2]">
@@ -131,6 +131,17 @@ export function ProgressSection({
         </div>
 
         <div className="p-5">
+          <p className="text-xs text-[#6B736D] dark:text-[#959E97]">Upcoming Plans</p>
+          <p className="mt-1.5 font-mono-tabular text-2xl font-semibold text-[#1C1F1D] dark:text-[#F2F4F2]">
+            {stats.upcomingPlannedGoalsCount}
+          </p>
+          <p className="mt-1 text-xs text-[#8A928C] dark:text-[#6E7770]">
+            Across {stats.upcomingDaysCount} future{' '}
+            {stats.upcomingDaysCount === 1 ? 'date' : 'dates'}
+          </p>
+        </div>
+
+        <div className="p-5">
           <p className="text-xs text-[#6B736D] dark:text-[#959E97]">100% Days</p>
           <p className="mt-1.5 font-mono-tabular text-2xl font-semibold text-[#1C1F1D] dark:text-[#F2F4F2]">
             {stats.perfectDaysCount}
@@ -148,12 +159,12 @@ export function ProgressSection({
               : '—'}
           </p>
           <p className="mt-1 text-xs text-[#8A928C] dark:text-[#6E7770]">
-            Across {stats.activeDaysCount} active{' '}
+            Across {stats.activeDaysCount} past/current{' '}
             {stats.activeDaysCount === 1 ? 'day' : 'days'}
           </p>
         </div>
 
-        <div className="p-5 sm:col-span-2 lg:col-span-1">
+        <div className="p-5">
           <p className="text-xs text-[#6B736D] dark:text-[#959E97]">Consistency Streak</p>
           <p className="mt-1.5 font-mono-tabular text-2xl font-semibold text-[#4A6B53] dark:text-[#7CA386]">
             {stats.currentStreak}{' '}

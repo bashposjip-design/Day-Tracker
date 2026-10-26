@@ -21,6 +21,7 @@ export function DailyReflection({
   const [justSaved, setJustSaved] = useState(false);
 
   const isToday = selectedDateKey === todayDateKey;
+  const isFuture = selectedDateKey > todayDateKey;
   const isDirty = draft !== savedReflection;
 
   useEffect(() => {
@@ -51,12 +52,14 @@ export function DailyReflection({
             id="reflection-heading"
             className="text-lg font-semibold tracking-tight text-[#1C1F1D] dark:text-[#F2F4F2]"
           >
-            A moment to reflect
+            {isFuture ? 'Notes for this upcoming day' : 'A moment to reflect'}
           </h2>
           <p className="mt-0.5 text-xs text-[#6B736D] dark:text-[#959E97]">
             {isToday
               ? 'Optional evening or midday note — what went well, what you learned, or what to carry into tomorrow.'
-              : `Reflection recorded for ${formatFullDate(selectedDateKey)}.`}
+              : isFuture
+                ? `Optional preparation notes or context for ${formatFullDate(selectedDateKey)}.`
+                : `Reflection recorded for ${formatFullDate(selectedDateKey)}.`}
           </p>
         </div>
 
@@ -75,7 +78,7 @@ export function DailyReflection({
 
       <div className="mt-4">
         <label htmlFor="daily-reflection-textarea" className="sr-only">
-          Daily reflection for {formatFullDate(selectedDateKey)}
+          {isFuture ? 'Preparation notes' : 'Daily reflection'} for {formatFullDate(selectedDateKey)}
         </label>
         <textarea
           id="daily-reflection-textarea"
@@ -84,7 +87,11 @@ export function DailyReflection({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => void persistIfDirty()}
-          placeholder="Write a few quiet sentences about your day..."
+          placeholder={
+            isFuture
+              ? 'Jot down reminders, context, or focus notes for this upcoming date...'
+              : 'Write a few quiet sentences about your day...'
+          }
           className="w-full resize-y rounded-xl border border-[#DFDDD6] dark:border-[#2D332F] bg-[#FAF9F6] dark:bg-[#131715] p-3.5 text-sm leading-relaxed text-[#1C1F1D] dark:text-[#F2F4F2] placeholder:text-[#8A928C] dark:placeholder:text-[#6C756E] focus:border-[#4A6B53] dark:focus:border-[#7CA386] focus:bg-white dark:focus:bg-[#181C1A] focus:outline-none transition-colors"
         />
       </div>
@@ -100,7 +107,7 @@ export function DailyReflection({
           onClick={() => void persistIfDirty()}
           className="rounded-lg bg-[#4A6B53] px-4 py-2 text-xs font-medium text-white hover:bg-[#3D5A45] disabled:opacity-40 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4A6B53]"
         >
-          {saving ? 'Saving...' : 'Save Reflection'}
+          {saving ? 'Saving...' : isFuture ? 'Save Note' : 'Save Reflection'}
         </button>
       </div>
     </section>

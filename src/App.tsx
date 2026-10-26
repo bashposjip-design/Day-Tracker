@@ -3,6 +3,7 @@ import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import {
   clearAllUserRecords,
+  deleteSingleDayRecord,
   ensureUserProfile,
   formatFriendlyDataError,
   importBackupToFirestore,
@@ -176,8 +177,27 @@ export default function App() {
     if (!currentUser) return;
     setSyncError(null);
     const existing = records[dateKey];
+    const existingReflection = existing?.reflection ?? '';
+    const isNowCompletelyEmpty =
+      nextGoals.length === 0 && existingReflection.trim().length === 0;
 
-    // Optimistic UI update scoped to this user
+    if (isNowCompletelyEmpty) {
+      setRecords((prev) => {
+        const copy = { ...prev };
+        delete copy[dateKey];
+        return copy;
+      });
+      if (existing) {
+        try {
+          await deleteSingleDayRecord(currentUser.uid, dateKey);
+        } catch (err) {
+          setSyncError(formatFriendlyDataError(err));
+        }
+      }
+      return;
+    }
+
+    // Optimistic UI update scoped to this user and selected date
     setRecords((prev) => ({
       ...prev,
       [dateKey]: {
@@ -186,7 +206,7 @@ export default function App() {
         goals: nextGoals,
         totalGoals: nextGoals.length,
         completedGoals: nextGoals.filter((g) => g.completed).length,
-        reflection: existing?.reflection ?? '',
+        reflection: existingReflection,
       },
     }));
 
@@ -196,7 +216,7 @@ export default function App() {
         dateKey,
         nextGoals,
         Boolean(existing),
-        existing?.reflection ?? ''
+        existingReflection
       );
     } catch (err) {
       setSyncError(formatFriendlyDataError(err));
@@ -207,13 +227,32 @@ export default function App() {
     if (!currentUser) return;
     setSyncError(null);
     const existing = records[dateKey];
+    const existingGoals = existing?.goals ?? [];
+    const isNowCompletelyEmpty =
+      existingGoals.length === 0 && reflection.trim().length === 0;
+
+    if (isNowCompletelyEmpty) {
+      setRecords((prev) => {
+        const copy = { ...prev };
+        delete copy[dateKey];
+        return copy;
+      });
+      if (existing) {
+        try {
+          await deleteSingleDayRecord(currentUser.uid, dateKey);
+        } catch (err) {
+          setSyncError(formatFriendlyDataError(err));
+        }
+      }
+      return;
+    }
 
     setRecords((prev) => ({
       ...prev,
       [dateKey]: {
         uid: currentUser.uid,
         date: dateKey,
-        goals: existing?.goals ?? [],
+        goals: existingGoals,
         totalGoals: existing?.totalGoals ?? 0,
         completedGoals: existing?.completedGoals ?? 0,
         reflection,
@@ -226,7 +265,7 @@ export default function App() {
         dateKey,
         reflection,
         Boolean(existing),
-        existing?.goals ?? []
+        existingGoals
       );
     } catch (err) {
       setSyncError(formatFriendlyDataError(err));

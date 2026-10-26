@@ -35,6 +35,22 @@ export function shiftDateKey(dateKey: string, deltaDays: number): string {
   return getLocalDateKey(d);
 }
 
+export function getDaysDiffFromToday(dateKey: string, todayDateKey: string): number {
+  const target = parseLocalDateKey(dateKey);
+  const today = parseLocalDateKey(todayDateKey);
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((target.getTime() - today.getTime()) / msPerDay);
+}
+
+export function formatRelativeDateLabel(dateKey: string, todayDateKey: string): string {
+  const diff = getDaysDiffFromToday(dateKey, todayDateKey);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff === -1) return 'Yesterday';
+  if (diff > 1) return `In ${diff} days`;
+  return `${Math.abs(diff)} days ago`;
+}
+
 export function formatFullDate(dateKey: string): string {
   const d = parseLocalDateKey(dateKey);
   return new Intl.DateTimeFormat('en-US', {
@@ -48,6 +64,15 @@ export function formatFullDate(dateKey: string): string {
 export function formatCompactDate(dateKey: string): string {
   const d = parseLocalDateKey(dateKey);
   return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+  }).format(d);
+}
+
+export function formatShortWeekdayDate(dateKey: string): string {
+  const d = parseLocalDateKey(dateKey);
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
   }).format(d);
@@ -72,7 +97,6 @@ export function getTimeAwareGreeting(now: Date = new Date()): string {
 
 export function getDeterministicDayNumber(dateKey: string): number {
   const [y, m, d] = dateKey.split('-').map(Number);
-  // Deterministic hash from local calendar YYYY, MM, DD
   return y * 372 + m * 31 + d;
 }
 

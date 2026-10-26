@@ -278,13 +278,13 @@ export function LandingPage({ todayDateKey, onOpenAuth }: LandingPageProps) {
             <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 rounded-2xl border border-[#E7E5DF] dark:border-[#262B28] bg-white dark:bg-[#181C1A] p-7">
                 <p className="font-mono-tabular text-xs text-[#4A6B53] dark:text-[#7CA386]">
-                  01. Morning Reset & Fresh Calendar Days
+                  01. Daily Reset & Future Date Planning
                 </p>
                 <h3 className="mt-2 text-lg font-semibold text-[#1C1F1D] dark:text-[#F2F4F2]">
-                  Every new morning opens a clean page without erasing yesterday
+                  Focus on today, plan upcoming dates ahead of time, and keep every past day intact
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-[#5C645E] dark:text-[#9CA59E]">
-                  Goals and reflections are keyed strictly to your local calendar date. Monday’s effort stays preserved on Monday while Tuesday greets you with a fresh slate. Revisit any past day from the built-in archive calendar.
+                  Select any future calendar date to schedule upcoming goals or preparation notes in advance. When that morning arrives, your planned items greet you automatically as Today’s Intentions while every past day stays preserved in your archive.
                 </p>
               </div>
 

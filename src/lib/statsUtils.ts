@@ -7,8 +7,10 @@ export interface ProgressStatsSummary {
   todayPercent: number | null; // null when today has 0 goals
   perfectDaysCount: number;
   activeDaysCount: number;
-  averageCompletionPercent: number | null; // null when 0 days have goals
+  averageCompletionPercent: number | null; // null when 0 days <= today have goals
   currentStreak: number;
+  upcomingDaysCount: number;
+  upcomingPlannedGoalsCount: number;
 }
 
 export interface ChartDataPoint {
@@ -44,9 +46,18 @@ export function computeProgressStats(
   let activeDaysCount = 0;
   let perfectDaysCount = 0;
   let sumPercentages = 0;
+  let upcomingDaysCount = 0;
+  let upcomingPlannedGoalsCount = 0;
 
-  for (const rec of Object.values(records)) {
-    if (rec.totalGoals > 0) {
+  for (const [dateKey, rec] of Object.entries(records)) {
+    if (rec.totalGoals <= 0) continue;
+
+    if (dateKey > todayDateKey) {
+      // Future scheduled days: count toward upcoming planning summary without
+      // penalizing historical completion averages before those days arrive.
+      upcomingDaysCount += 1;
+      upcomingPlannedGoalsCount += rec.totalGoals;
+    } else {
       activeDaysCount += 1;
       const pct = (rec.completedGoals / rec.totalGoals) * 100;
       sumPercentages += pct;
@@ -59,9 +70,6 @@ export function computeProgressStats(
   const averageCompletionPercent =
     activeDaysCount > 0 ? Math.round(sumPercentages / activeDaysCount) : null;
 
-  // Streak calculation across consecutive local calendar days:
-  // If today already qualifies, count backward starting from today.
-  // If today does not yet qualify, count backward starting from yesterday so morning resets stay encouraging.
   let currentStreak = 0;
   let cursor = meetsStreakRule(todayRecord, streakRule)
     ? todayDateKey
@@ -81,13 +89,15 @@ export function computeProgressStats(
     activeDaysCount,
     averageCompletionPercent,
     currentStreak,
+    upcomingDaysCount,
+    upcomingPlannedGoalsCount,
   };
 }
 
 /**
- * Builds chronological chart points strictly from days that have at least 1 recorded goal.
- * Zero-goal days are intentionally excluded from the completion-rate curve so they are never
- * misleadingly plotted as 100% or fabricated values.
+ * Builds chronological chart points strictly from past/current days (date <= today)
+ * that have at least 1 recorded goal. Future planned days and zero-goal days are excluded
+ * so historical completion percentages are never distorted.
  */
 export function buildChartSeries(
   records: Record<string, DailyRecord>,

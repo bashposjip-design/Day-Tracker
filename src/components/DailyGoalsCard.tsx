@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
+  CalendarClock,
   Check,
   CheckCircle2,
   Flag,
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 import { BRAND } from '../config/brand';
 import type { GoalItem } from '../types/daylight';
-import { formatFullDate } from '../lib/dateUtils';
+import { formatFullDate, formatRelativeDateLabel } from '../lib/dateUtils';
 
 interface DailyGoalsCardProps {
   selectedDateKey: string;
@@ -40,6 +41,9 @@ export function DailyGoalsCard({
   const [validationMsg, setValidationMsg] = useState<string | null>(null);
 
   const isToday = selectedDateKey === todayDateKey;
+  const isFuture = selectedDateKey > todayDateKey;
+  const relativeLabel = formatRelativeDateLabel(selectedDateKey, todayDateKey);
+
   const totalCount = goals.length;
   const completedCount = goals.filter((g) => g.completed).length;
   const completionPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -50,11 +54,15 @@ export function DailyGoalsCard({
     setValidationMsg(null);
     const trimmed = draftText.trim();
     if (!trimmed) {
-      setValidationMsg('Write a clear intention before adding.');
+      setValidationMsg(
+        isFuture
+          ? 'Write an upcoming plan or goal before adding.'
+          : 'Write a clear intention before adding.'
+      );
       return;
     }
     if (goals.length >= BRAND.maxGoalsPerDay) {
-      setValidationMsg(`Each day supports up to ${BRAND.maxGoalsPerDay} goals.`);
+      setValidationMsg(`Each day supports up to ${BRAND.maxGoalsPerDay} items.`);
       return;
     }
 
@@ -136,19 +144,45 @@ export function DailyGoalsCard({
     await onSaveGoals(reordered);
   };
 
+  const headingTitle = isToday
+    ? 'Today’s Intentions'
+    : isFuture
+      ? `${relativeLabel === 'Tomorrow' ? 'Tomorrow’s Plans' : `Upcoming Plans · ${relativeLabel}`}`
+      : `Goals for ${formatFullDate(selectedDateKey)}`;
+
+  const subtitleText =
+    totalCount === 0
+      ? isToday
+        ? 'Choose the clear, meaningful tasks that will make today a success.'
+        : isFuture
+          ? `Schedule upcoming plans for ${formatFullDate(selectedDateKey)}. They will be waiting for you when this morning arrives.`
+          : 'No goals were recorded on this past date.'
+      : isFuture && completedCount === 0
+        ? `${totalCount} upcoming ${totalCount === 1 ? 'plan' : 'plans'} scheduled for ${formatFullDate(selectedDateKey)}`
+        : `${completedCount} of ${totalCount} ${totalCount === 1 ? 'goal' : 'goals'} completed`;
+
   return (
     <section
       aria-labelledby="daily-goals-heading"
       className="rounded-2xl border border-[#E7E5DF] dark:border-[#262B28] bg-white dark:bg-[#181C1A] p-5 sm:p-8"
     >
-      {/* Past Date Context Banner */}
+      {/* Contextual Past or Future Date Banner */}
       {!isToday && (
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#F5F4F0] dark:bg-[#202522] px-4 py-2.5 text-xs text-[#4C544E] dark:text-[#B4BDB6]">
-          <span>
-            Viewing historical record ·{' '}
-            <strong className="font-medium text-[#1C1F1D] dark:text-[#F2F4F2]">
-              {formatFullDate(selectedDateKey)}
-            </strong>
+        <div
+          className={`mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-xs ${
+            isFuture
+              ? 'bg-[#4A6B53]/[0.08] dark:bg-[#7CA386]/[0.12] text-[#2B4332] dark:text-[#CFE5D5]'
+              : 'bg-[#F5F4F0] dark:bg-[#202522] text-[#4C544E] dark:text-[#B4BDB6]'
+          }`}
+        >
+          <span className="inline-flex items-center gap-2">
+            {isFuture && <CalendarClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+            <span>
+              {isFuture ? 'Planning upcoming date' : 'Viewing historical record'} ·{' '}
+              <strong className="font-medium text-[#1C1F1D] dark:text-[#F2F4F2]">
+                {formatFullDate(selectedDateKey)}
+              </strong>
+            </span>
           </span>
           <button
             type="button"
@@ -168,29 +202,38 @@ export function DailyGoalsCard({
             id="daily-goals-heading"
             className="text-xl sm:text-2xl font-semibold tracking-tight text-[#1C1F1D] dark:text-[#F2F4F2]"
           >
-            {isToday ? 'Today’s Intentions' : `Goals for ${formatFullDate(selectedDateKey)}`}
+            {headingTitle}
           </h2>
           <p className="mt-1 text-sm text-[#6B736D] dark:text-[#959E97]">
-            {totalCount === 0
-              ? isToday
-                ? 'Choose the clear, meaningful tasks that will make today a success.'
-                : 'No goals were recorded on this date.'
-              : `${completedCount} of ${totalCount} ${totalCount === 1 ? 'goal' : 'goals'} completed`}
+            {subtitleText}
           </p>
         </div>
 
         {totalCount > 0 && (
           <div className="flex items-baseline gap-2 shrink-0">
-            <span className="font-mono-tabular text-2xl font-semibold text-[#1C1F1D] dark:text-[#F2F4F2]">
-              {completionPct}%
-            </span>
-            <span className="text-xs text-[#6B736D] dark:text-[#959E97]">complete</span>
+            {isFuture && completedCount === 0 ? (
+              <>
+                <span className="font-mono-tabular text-2xl font-semibold text-[#4A6B53] dark:text-[#7CA386]">
+                  {totalCount}
+                </span>
+                <span className="text-xs text-[#6B736D] dark:text-[#959E97]">
+                  {totalCount === 1 ? 'plan set' : 'plans set'}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-mono-tabular text-2xl font-semibold text-[#1C1F1D] dark:text-[#F2F4F2]">
+                  {completionPct}%
+                </span>
+                <span className="text-xs text-[#6B736D] dark:text-[#959E97]">complete</span>
+              </>
+            )}
           </div>
         )}
       </div>
 
       {/* Subtle Progress Bar */}
-      {totalCount > 0 && (
+      {totalCount > 0 && (!isFuture || completedCount > 0) && (
         <div
           className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[#EFECE6] dark:bg-[#252A27]"
           role="progressbar"
@@ -206,12 +249,12 @@ export function DailyGoalsCard({
         </div>
       )}
 
-      {/* Add Goal Input Form */}
+      {/* Add Goal / Plan Input Form */}
       <form onSubmit={handleAddGoal} className="mt-6">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <div className="relative flex-1 flex items-center">
             <label htmlFor="new-goal-input" className="sr-only">
-              Write a goal for {isToday ? 'today' : formatFullDate(selectedDateKey)}
+              Write a goal or plan for {isToday ? 'today' : formatFullDate(selectedDateKey)}
             </label>
             <input
               id="new-goal-input"
@@ -225,7 +268,9 @@ export function DailyGoalsCard({
               placeholder={
                 isToday
                   ? 'Write a clear goal for today and press Enter...'
-                  : 'Add a goal to this date...'
+                  : isFuture
+                    ? `Add an upcoming plan for ${relativeLabel.toLowerCase()} and press Enter...`
+                    : 'Add a goal to this past date...'
               }
               className="w-full rounded-xl border border-[#DFDDD6] dark:border-[#2D332F] bg-[#FAF9F6] dark:bg-[#131715] pl-4 pr-11 py-3 text-[15px] text-[#1C1F1D] dark:text-[#F2F4F2] placeholder:text-[#8A928C] dark:placeholder:text-[#6C756E] focus:border-[#4A6B53] dark:focus:border-[#7CA386] focus:bg-white dark:focus:bg-[#181C1A] focus:outline-none transition-colors"
             />
@@ -233,8 +278,8 @@ export function DailyGoalsCard({
               type="button"
               onClick={() => setDraftImportant((prev) => !prev)}
               aria-pressed={draftImportant}
-              aria-label={draftImportant ? 'Remove priority marker' : 'Mark new goal as key priority'}
-              title={draftImportant ? 'Priority goal enabled' : 'Mark as key priority'}
+              aria-label={draftImportant ? 'Remove priority marker' : 'Mark as key priority'}
+              title={draftImportant ? 'Priority enabled' : 'Mark as key priority'}
               className={`absolute right-2.5 inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-[#4A6B53] ${
                 draftImportant
                   ? 'bg-[#4A6B53]/15 text-[#4A6B53] dark:bg-[#7CA386]/20 dark:text-[#7CA386]'
@@ -251,7 +296,7 @@ export function DailyGoalsCard({
             className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#4A6B53] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#3D5A45] disabled:opacity-60 transition-colors whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4A6B53]"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            <span>Add Goal</span>
+            <span>{isFuture ? 'Add Plan' : 'Add Goal'}</span>
           </button>
         </div>
 
@@ -266,12 +311,18 @@ export function DailyGoalsCard({
       {totalCount === 0 ? (
         <div className="mt-8 rounded-xl border border-dashed border-[#DFDDD6] dark:border-[#2D332F] px-6 py-10 text-center">
           <p className="text-[15px] font-medium text-[#2E3430] dark:text-[#E2E7E3]">
-            {isToday ? 'Your page for today is clean.' : 'No intentions logged for this day.'}
+            {isToday
+              ? 'Your page for today is clean.'
+              : isFuture
+                ? 'Nothing scheduled for this upcoming day yet.'
+                : 'No intentions logged for this past day.'}
           </p>
           <p className="mx-auto mt-1.5 max-w-md text-sm text-[#6B736D] dark:text-[#959E97]">
             {isToday
               ? 'Start with 3 to 5 realistic intentions. Checking them off builds steady, visible momentum.'
-              : 'You can still record goals or a reflection for this date using the field above.'}
+              : isFuture
+                ? 'Write down commitments, milestones, or priorities ahead of time so your future morning starts with instant clarity.'
+                : 'You can still record goals or a reflection for this date using the field above.'}
           </p>
         </div>
       ) : (
@@ -288,7 +339,6 @@ export function DailyGoalsCard({
                 }`}
               >
                 <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                  {/* Accessible Large Tap-Target Checkbox */}
                   <button
                     type="button"
                     role="checkbox"
@@ -364,7 +414,7 @@ export function DailyGoalsCard({
                         <div className="mt-1 flex items-center gap-2 text-xs text-[#6B736D] dark:text-[#959E97]">
                           {goal.important && (
                             <span className="font-medium text-[#4A6B53] dark:text-[#7CA386]">
-                              Priority intention
+                              Priority {isFuture ? 'plan' : 'intention'}
                             </span>
                           )}
                           {goal.important && justCompleted && <span aria-hidden="true">·</span>}
@@ -379,7 +429,6 @@ export function DailyGoalsCard({
                   )}
                 </div>
 
-                {/* Action Controls: Priority, Reorder Up/Down, Edit, Delete */}
                 {!isEditing && (
                   <div className="flex items-center gap-0.5 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
                     <button
@@ -426,7 +475,7 @@ export function DailyGoalsCard({
                       type="button"
                       onClick={() => startEditing(goal)}
                       aria-label={`Edit "${goal.text}"`}
-                      title="Edit goal"
+                      title="Edit"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#8A928C] hover:bg-[#F3F2EE] dark:hover:bg-[#222724] hover:text-[#1C1F1D] dark:hover:text-[#F2F4F2] transition-colors focus-visible:outline-2 focus-visible:outline-[#4A6B53]"
                     >
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
@@ -436,7 +485,7 @@ export function DailyGoalsCard({
                       type="button"
                       onClick={() => handleDeleteGoal(goal.id)}
                       aria-label={`Delete "${goal.text}"`}
-                      title="Delete goal"
+                      title="Delete"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#8A928C] hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 transition-colors focus-visible:outline-2 focus-visible:outline-[#4A6B53]"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -460,7 +509,7 @@ export function DailyGoalsCard({
           <span>
             {isToday
               ? 'All of today’s intentions are complete. Take a quiet breath — you honored what you set out to do.'
-              : 'Every goal recorded on this date was completed.'}
+              : 'Every goal listed for this date is marked complete.'}
           </span>
         </div>
       )}

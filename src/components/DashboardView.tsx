@@ -10,8 +10,9 @@ import type {
   ThemePreference,
   UserProfile,
 } from '../types/daylight';
-import { formatFullDate, getTimeAwareGreeting } from '../lib/dateUtils';
+import { formatFullDate, getTimeAwareGreeting, shiftDateKey } from '../lib/dateUtils';
 import { QuoteCard } from './QuoteCard';
+import { DateNavigator } from './DateNavigator';
 import { DailyGoalsCard } from './DailyGoalsCard';
 import { CalendarHistory } from './CalendarHistory';
 import { DailyReflection } from './DailyReflection';
@@ -119,16 +120,17 @@ export function DashboardView({
               Today
             </a>
             <a
+              href="#intentions"
+              onClick={() => onSelectDate(shiftDateKey(todayDateKey, 1))}
+              className="hover:text-[#1C1F1D] dark:hover:text-[#F2F4F2] hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
+            >
+              Plan Ahead
+            </a>
+            <a
               href="#archive"
               className="hover:text-[#1C1F1D] dark:hover:text-[#F2F4F2] hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
             >
-              Archive
-            </a>
-            <a
-              href="#reflection"
-              className="hover:text-[#1C1F1D] dark:hover:text-[#F2F4F2] hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
-            >
-              Reflect
+              Calendar
             </a>
             <a
               href="#progress"
@@ -155,9 +157,9 @@ export function DashboardView({
 
       <main
         id="workspace-top"
-        className="mx-auto w-full max-w-6xl flex-1 px-5 sm:px-8 py-8 sm:py-12 space-y-10"
+        className="mx-auto w-full max-w-6xl flex-1 px-5 sm:px-8 py-8 sm:py-12 space-y-8"
       >
-        {/* Sync Error Banner (if any Firestore/quota issue occurs) */}
+        {/* Sync Error Banner */}
         {syncError && (
           <div
             role="alert"
@@ -188,7 +190,7 @@ export function DashboardView({
             </h1>
 
             <p className="mt-1.5 text-sm sm:text-base text-[#5C645E] dark:text-[#9CA59E]">
-              Set clear, realistic intentions for the day ahead and move through them one calm step at a time.
+              Focus on today’s intentions, schedule upcoming plans on future dates, and track your consistency over time.
             </p>
           </div>
 
@@ -216,7 +218,14 @@ export function DashboardView({
         {/* 2. Floating Daily Motivational Quote */}
         <QuoteCard todayDateKey={todayDateKey} />
 
-        {/* 3. Primary Workspace Split: Daily Goals + Reflection (Left) & Archive Calendar (Right) */}
+        {/* 3. Clean Date Picker & Horizon Navigation System */}
+        <DateNavigator
+          selectedDateKey={selectedDateKey}
+          todayDateKey={todayDateKey}
+          onSelectDate={onSelectDate}
+        />
+
+        {/* 4. Primary Workspace Split: Date-Scoped Goals + Notes (Left) & Calendar Planner (Right) */}
         {isLoadingRecords ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 rounded-2xl border border-[#E7E5DF] dark:border-[#262B28] bg-white dark:bg-[#181C1A] p-8 space-y-4">
@@ -262,7 +271,7 @@ export function DashboardView({
           </div>
         )}
 
-        {/* 4. Historical Progress Statistics & Pathway Line Chart */}
+        {/* 5. Historical Progress Statistics & Pathway Line Chart */}
         <div id="progress" className="pt-2">
           <ProgressSection
             records={records}

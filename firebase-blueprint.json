@@ -82,7 +82,7 @@
     },
     "DailyRecord": {
       "title": "DailyRecord",
-      "description": "Date-scoped daily goals checklist, completion metrics, and reflection owned by a single user.",
+      "description": "Date-scoped daily goals, upcoming plans, completion metrics, and reflection/notes owned by a single user across past, current, and future calendar dates.",
       "type": "object",
       "properties": {
         "uid": {
