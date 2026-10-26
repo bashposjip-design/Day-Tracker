@@ -1,0 +1,144 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user workspace profile and display preferences for Daylight.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Authenticated Firebase user UID owning this profile.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name shown in greetings and account settings.",
+          "minLength": 0,
+          "maxLength": 100
+        },
+        "theme": {
+          "type": "string",
+          "description": "Preferred visual theme for the workspace.",
+          "enum": ["light", "dark", "system"],
+          "maxLength": 10
+        },
+        "streakRule": {
+          "type": "string",
+          "description": "Rule used to calculate consistency streaks across calendar days.",
+          "enum": ["any_completed", "all_completed"],
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the user profile was initialized."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the user profile was last updated."
+        }
+      },
+      "required": ["uid", "displayName", "theme", "streakRule", "createdAt", "updatedAt"]
+    },
+    "GoalItem": {
+      "title": "GoalItem",
+      "description": "Individual daily goal item with independent completion and priority state.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the goal within the day.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "text": {
+          "type": "string",
+          "description": "Goal description written by the user.",
+          "minLength": 1,
+          "maxLength": 280
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the goal has been checked off."
+        },
+        "important": {
+          "type": "boolean",
+          "description": "Optional priority marker for key daily intentions."
+        },
+        "order": {
+          "type": "integer",
+          "description": "Zero-indexed sort position within the daily list."
+        },
+        "createdAtMs": {
+          "type": "integer",
+          "description": "Client epoch milliseconds when the goal item was added."
+        }
+      },
+      "required": ["id", "text", "completed", "important", "order", "createdAtMs"]
+    },
+    "DailyRecord": {
+      "title": "DailyRecord",
+      "description": "Date-scoped daily goals checklist, completion metrics, and reflection owned by a single user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Authenticated Firebase user UID owning this daily record.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "description": "Local calendar date key in YYYY-MM-DD format.",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "goals": {
+          "type": "array",
+          "description": "Bounded list of up to 50 GoalItem maps for this calendar date."
+        },
+        "totalGoals": {
+          "type": "integer",
+          "description": "Total number of goals recorded on this date (must match goals.size())."
+        },
+        "completedGoals": {
+          "type": "integer",
+          "description": "Number of completed goals on this date (0 <= completedGoals <= totalGoals)."
+        },
+        "reflection": {
+          "type": "string",
+          "description": "Optional daily reflection note for this calendar date.",
+          "minLength": 0,
+          "maxLength": 5000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the daily record was first created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the daily record was last modified."
+        }
+      },
+      "required": ["uid", "date", "goals", "totalGoals", "completedGoals", "reflection", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user workspace document keyed by Firebase Auth UID."
+    },
+    "/users/{userId}/dailyRecords/{date}": {
+      "schema": { "$ref": "#/entities/DailyRecord" },
+      "description": "Private date-scoped daily goals and reflection records keyed by YYYY-MM-DD."
+    }
+  }
+}

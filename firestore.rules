@@ -1,0 +1,193 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 4.1: Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Hardened Global Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidDateId(dateId) {
+      return dateId is string && dateId.size() == 10 && dateId.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    // Pillar 1: Master Gate Relational Sync for subcollections
+    function hasValidParentUser(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId)).data.uid == request.auth.uid;
+    }
+
+    // Pillar 2: Validation Blueprints (Synchronized with firebase-blueprint.json)
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'theme', 'streakRule', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'theme', 'streakRule', 'createdAt', 'updatedAt'])
+        && data.uid is string
+        && data.uid.size() >= 1
+        && data.uid.size() <= 128
+        && data.uid.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.uid == request.auth.uid
+        && data.uid == userId
+        && data.displayName is string
+        && data.displayName.size() >= 0
+        && data.displayName.size() <= 100
+        && data.theme is string
+        && data.theme.size() <= 10
+        && data.theme in ['light', 'dark', 'system']
+        && data.streakRule is string
+        && data.streakRule.size() <= 20
+        && data.streakRule in ['any_completed', 'all_completed']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidGoalItem(goal) {
+      return goal is map
+        && goal.keys().hasAll(['id', 'text', 'completed', 'important', 'order', 'createdAtMs'])
+        && goal.keys().hasOnly(['id', 'text', 'completed', 'important', 'order', 'createdAtMs'])
+        && goal.id is string
+        && goal.id.size() >= 1
+        && goal.id.size() <= 64
+        && goal.id.matches('^[a-zA-Z0-9_\\-]+$')
+        && goal.text is string
+        && goal.text.size() >= 1
+        && goal.text.size() <= 280
+        && goal.completed is bool
+        && goal.important is bool
+        && goal.order is int
+        && goal.order >= 0
+        && goal.order <= 50
+        && goal.createdAtMs is int
+        && goal.createdAtMs >= 0;
+    }
+
+    function isValidDailyRecord(data, userId, dateId) {
+      return data.keys().hasAll(['uid', 'date', 'goals', 'totalGoals', 'completedGoals', 'reflection', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'date', 'goals', 'totalGoals', 'completedGoals', 'reflection', 'createdAt', 'updatedAt'])
+        && data.uid is string
+        && data.uid.size() >= 1
+        && data.uid.size() <= 128
+        && data.uid.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.uid == request.auth.uid
+        && data.uid == userId
+        && data.date is string
+        && data.date.size() == 10
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.date == dateId
+        && data.goals is list
+        && data.goals.size() <= 50
+        && (data.goals.size() == 0 || isValidGoalItem(data.goals[0]))
+        && (data.goals.size() <= 1 || isValidGoalItem(data.goals[data.goals.size() - 1]))
+        && data.totalGoals is int
+        && data.totalGoals == data.goals.size()
+        && data.completedGoals is int
+        && data.completedGoals >= 0
+        && data.completedGoals <= data.totalGoals
+        && data.reflection is string
+        && data.reflection.size() >= 0
+        && data.reflection.size() <= 5000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Collection 1: Private User Workspace Profile
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if (
+        isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action: Update Display Name
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+          // Action: Update Workspace Preferences
+          || incoming().diff(existing()).affectedKeys().hasOnly(['theme', 'streakRule', 'updatedAt'])
+          // Action: Sync Full Profile Settings
+          || incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'theme', 'streakRule', 'updatedAt'])
+        )
+      );
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Collection 2: Date-Scoped Daily Goals & Reflection Records
+      match /dailyRecords/{date} {
+        allow get: if isOwner(userId)
+          && isValidId(userId)
+          && isValidDateId(date)
+          && hasValidParentUser(userId);
+
+        // Pillar 8: Secure List Query Enforcer (no get()/exists() inside list)
+        allow list: if isOwner(userId)
+          && existing().uid == request.auth.uid;
+
+        allow create: if isOwner(userId)
+          && isValidId(userId)
+          && isValidDateId(date)
+          && isValidDailyRecord(incoming(), userId, date)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasValidParentUser(userId);
+
+        allow update: if (
+          isOwner(userId)
+          && isValidId(userId)
+          && isValidDateId(date)
+          && isValidDailyRecord(incoming(), userId, date)
+          && incoming().uid == existing().uid
+          && incoming().date == existing().date
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            // Action: Update Daily Goals Checklist
+            incoming().diff(existing()).affectedKeys().hasOnly(['goals', 'totalGoals', 'completedGoals', 'updatedAt'])
+            // Action: Update Daily Reflection
+            || incoming().diff(existing()).affectedKeys().hasOnly(['reflection', 'updatedAt'])
+            // Action: Full Daily Record Sync / Backup Import
+            || incoming().diff(existing()).affectedKeys().hasOnly(['goals', 'totalGoals', 'completedGoals', 'reflection', 'updatedAt'])
+          )
+          && hasValidParentUser(userId)
+        );
+
+        allow delete: if isOwner(userId)
+          && isValidId(userId)
+          && isValidDateId(date)
+          && hasValidParentUser(userId);
+      }
+    }
+  }
+}

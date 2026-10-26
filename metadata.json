@@ -1,0 +1,6 @@
+{
+  "name": "Daylight — Your Daily Reset",
+  "description": "A calm, minimalist daily intentions journal and progress tracker. Start every morning with clarity, check off daily goals, and visualize your consistency over time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
