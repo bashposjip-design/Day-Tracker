@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight, Check, Copy, Lock, Sun } from 'lucide-react';
-import { BRAND } from '../config/brand';
+import { BRAND, getShareableSiteUrl } from '../config/brand';
 import { QuoteCard } from './QuoteCard';
 import type { AuthMode } from './AuthModal';
 import { formatFullDate } from '../lib/dateUtils';
@@ -32,7 +32,7 @@ export function LandingPage({ todayDateKey, onOpenAuth }: LandingPageProps) {
 
   const handleCopyWebsiteUrl = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.origin);
+      await navigator.clipboard.writeText(getShareableSiteUrl());
       setCopiedUrl(true);
       window.setTimeout(() => setCopiedUrl(false), 2200);
     } catch {

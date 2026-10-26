@@ -8,7 +8,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { BRAND } from '../config/brand';
+import { BRAND, getShareableSiteUrl } from '../config/brand';
 import type {
   BackupSchemaV1,
   DailyRecord,
@@ -106,14 +106,15 @@ export function SettingsModal({
   };
 
   const handleCopyShareLink = async () => {
+    const shareUrl = getShareableSiteUrl();
     try {
-      await navigator.clipboard.writeText(window.location.origin);
+      await navigator.clipboard.writeText(shareUrl);
       setCopiedLink(true);
       window.setTimeout(() => setCopiedLink(false), 2200);
     } catch {
       setStatusNotice({
         type: 'error',
-        text: `Copy manually: ${window.location.origin}`,
+        text: `Copy manually: ${shareUrl}`,
       });
     }
   };

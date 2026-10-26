@@ -14,3 +14,11 @@ export const BRAND = {
   maxReflectionLength: 5000,
   maxDisplayNameLength: 100,
 } as const;
+
+/**
+ * Returns the full canonical public entry URL, preserving repository subpaths
+ * when hosted on GitHub Pages (e.g. https://username.github.io/daylight/).
+ */
+export function getShareableSiteUrl(): string {
+  return `${window.location.origin}${window.location.pathname}`;
+}

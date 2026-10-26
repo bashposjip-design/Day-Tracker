@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, Copy, Settings, Sun } from 'lucide-react';
-import { BRAND } from '../config/brand';
+import { BRAND, getShareableSiteUrl } from '../config/brand';
 import type {
   BackupSchemaV1,
   DailyRecord,
@@ -80,7 +80,7 @@ export function DashboardView({
 
   const handleCopyShareUrl = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.origin);
+      await navigator.clipboard.writeText(getShareableSiteUrl());
       setCopiedShare(true);
       window.setTimeout(() => setCopiedShare(false), 2200);
     } catch {

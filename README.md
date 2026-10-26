@@ -4,6 +4,30 @@ A calm, minimalist, multi-user daily goals journal and progress visualization we
 
 ---
 
+## Deploying via GitHub
+
+This project is pre-configured for both **GitHub Pages** and **GitHub → Netlify** deployments:
+
+- `vite.config.ts` uses `base: './'` so static assets load cleanly whether hosted on a subpath (`https://<your-username>.github.io/<repo-name>/`) or a root domain (`https://<your-site>.netlify.app/`).
+- `.github/workflows/deploy.yml` automatically builds and deploys `dist/` to **GitHub Pages** whenever you push to `main` (or `master`).
+
+### Option 1: Host Directly on GitHub Pages
+1. Export or push this repository to GitHub (keep `firebase-applet-config.json` committed—it contains standard public Firebase Web client identifiers required by the frontend SDK, while security is enforced server-side by `firestore.rules`).
+2. In your GitHub repository, open **Settings → Pages**.
+3. Under **Build and deployment → Source**, select **GitHub Actions**.
+4. Push to `main` (or click **Run workflow** under the **Actions** tab). Your live URL will appear at `https://<your-username>.github.io/<repo-name>/`.
+5. **Authorize Your GitHub Pages Domain in Firebase** *(Required for Sign-In)*:
+   - Open [Firebase Console → Authentication → Settings → Authorized domains](https://console.firebase.google.com/project/gen-lang-client-0490989809/authentication/settings).
+   - Click **Add domain** and enter `<your-username>.github.io` (just the hostname, without `https://` or `/<repo-name>`).
+
+### Option 2: Connect GitHub Repository to Netlify
+1. Push this repository to GitHub.
+2. In Netlify, choose **Add new site → Import an existing project → GitHub** and select your repository.
+3. Netlify automatically detects `netlify.toml` (`npm run build`, publish directory `dist`).
+4. Add your resulting `<your-site>.netlify.app` hostname under **Firebase Console → Authentication → Settings → Authorized domains**.
+
+---
+
 ## Architecture Overview
 
 - **Brand Configuration (`src/config/brand.ts`)**: Centralized brand name (`Daylight`) and tagline (`Your Daily Reset`) so renaming the website takes a single one-line edit.
@@ -22,52 +46,18 @@ A calm, minimalist, multi-user daily goals journal and progress visualization we
 
 ---
 
-## Security Rules & Data Model
+## Security Rules & Optional Providers
 
-Firestore security rules (`firestore.rules`) enforce:
-1. Default-deny catch-all across the entire database (`allow read, write: if false;`).
-2. Strict verified ownership (`request.auth != null && request.auth.token.email_verified == true && request.auth.uid == userId`).
-3. Parent `users/{userId}` relational verification (`hasValidParentUser`) on single-document operations and `resource.data.uid == request.auth.uid` on list queries.
-4. Strict field allowlists (`hasAll` / `hasOnly`), immutable `uid` / `date` / `createdAt`, server-timestamp validation (`request.time`), and string/array size caps (`<= 50` goals/day, `<= 280` chars/goal, `<= 5000` chars/reflection).
-
-> **Security Note**: Before sharing any production deployment broadly, review `firestore.rules` in the Firebase Console Rules Playground and audit any future schema changes with `npx eslint firestore.rules`.
+- **Google Sign-In**: Provisioned and ready out of the box via `signInWithPopup`.
+- **Email & Password Sign-In (Optional)**: To enable Email/Password alongside Google Sign-In, open **Firebase Console → Authentication → Sign-in method → Email/Password → Enable → Save**.
+- **Firestore Security Rules (`firestore.rules`)**: Enforces verified ownership (`request.auth.uid == userId` and `email_verified == true`), parent profile checks, field allowlists, and size limits. Review `firestore.rules` in the Firebase Console Rules Playground before sharing broadly.
 
 ---
 
 ## Local Development
 
 ```bash
-# 1. Install dependencies
 npm install
-
-# 2. Start local Vite dev server (http://localhost:3000)
 npm run dev
-
-# 3. Type-check and build production static bundle
-npm run lint
 npm run build
 ```
-
----
-
-## Firebase Authentication & Free-Tier Quotas
-
-- **Google Sign-In**: Provisioned and ready out of the box via `signInWithPopup`.
-- **Email & Password Sign-In (Optional Manual Toggle)**:
-  - The UI supports Email & Password registration, email verification, sign-in, and password reset.
-  - To enable Email/Password in Firebase Console: open **Authentication → Sign-in method → Add new provider → Email/Password → Enable → Save**.
-- **Free-Tier Quotas (Firebase Spark Plan)**:
-  - Daylight stores each calendar day as a single compact document (`users/{uid}/dailyRecords/{YYYY-MM-DD}`) and caches reads locally per UID to minimize Firestore reads and writes within Firebase’s free Spark tier.
-
----
-
-## Deploying to Netlify
-
-`netlify.toml` is preconfigured for zero-config static deployment:
-
-1. Push this repository to GitHub / GitLab / Bitbucket, or run `npm run build` and drag-and-drop the `dist/` folder into Netlify.
-2. Netlify settings (auto-detected from `netlify.toml`):
-   - **Build command**: `npm run build`
-   - **Publish directory**: `dist`
-3. **Important — Authorize Your Netlify Domain in Firebase**:
-   - Once Netlify assigns your domain (e.g., `your-daylight-app.netlify.app`), open **Firebase Console → Authentication → Settings → Authorized domains → Add domain** and add `your-daylight-app.netlify.app` so Google Sign-In popups are permitted on your live URL.
